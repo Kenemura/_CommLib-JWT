@@ -1,0 +1,70 @@
+﻿@page "/Identity/Role/Edit/{action}"
+@page "/Identity/Role/Edit/{action}/{id}"
+@using MyCommLib.Shared.Models.Identity
+@inject NavigationManager NM
+@inject IdentityApi api
+
+<EditForm Model="RoleEdit" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <ul>
+        @foreach (string msg in ErrorMessages)
+        {
+            <li style="color: red">@msg</li>
+        }
+    </ul>
+    <div class="m-2">
+        <label class="MyFormLabel">Name:</label>
+        <InputText @bind-Value="@RoleEdit.Name" Disabled="@IsDisabled" autofocus />
+    </div>
+    @if (action == "create")
+    {
+        <button type="submit" class="btn btn-sm btn-primary">Create</button>
+    }
+    else if (action == "delete")
+    {
+        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+    }
+    <span></span>
+    <a class="btn btn-sm btn-warning" href="Identity/Roles/list">Cancel</a>
+</EditForm>
+
+@code {
+    [Parameter] public string id { get; set; } = null!;
+    [Parameter] public string action { get; set; } = null!;
+    private bool IsDisabled => (action == "delete") ? true : false;
+
+    public IdentityRoleEditModel RoleEdit { get; set; } = new IdentityRoleEditModel();
+    public List<string> ErrorMessages { get; set; } = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (action != "create")
+        {
+            IdentityRoleModel role = await api.GetRole(id);
+            RoleEdit.Id = role.Id;
+            RoleEdit.Name = role.Name!;
+        }
+    }
+
+    public async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (action == "create")
+            {
+                await api.CreateRole(RoleEdit);
+            }
+            else if (action == "delete")
+            {
+                await api.DeleteRole(RoleEdit);
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessages.Add(ex.Message);
+            return;
+        }
+        NM.NavigateTo("Identity/Roles/list");
+    }
+}

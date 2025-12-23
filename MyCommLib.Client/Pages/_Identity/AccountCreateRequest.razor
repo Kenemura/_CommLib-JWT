@@ -1,0 +1,80 @@
+﻿@page "/identity/CreateRequest"
+@inject IdentityApi api
+@attribute [Authorize(Roles = "AdminUsers")]
+
+<br/>
+<div class="alert alert-info mt-5">Account Create Request</div>
+@if (Status == "Sent")
+{
+    <div class="alert alert-warning">You'll receive an email shortly. While waiting, you can continue using as a visitor.</div>
+}
+else if (!String.IsNullOrEmpty(Status))
+{
+    <MySpinner>@Status</MySpinner>
+}
+else
+{
+    <EditForm class="form-signin" OnValidSubmit="OnSubmit" Model="Req">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <ul>
+            @foreach (string msg in ErrorMessages)
+            {
+                <li style="color: red">@msg</li>
+            }
+        </ul>
+
+        <div class="form-group">
+            <label class="MyFormLabel">User Name: (Choose your preferred Username. It should be unique among the users)</label>
+            <InputText class="form-control" @bind-Value="Req.Username" autofocus placeholder="User Name" />
+        </div>
+        <div class="form-group">
+            <label class="MyFormLabel">Email: (Enter your working email address)</label>
+            <InputText class="form-control" @bind-Value="Req.Email" autofocus placeholder="Email" />
+        </div>
+
+        <div class="my-2">
+            <button class="btn btn-primary btn-sm" type="submit">Create Request</button>
+            <a class="btn btn-sm btn-warning" href="@ReturnTo">Cancel</a>
+        </div>
+    </EditForm>
+
+    <hr />
+    <div class="text-info">
+        - After you send this request, you will receive an Email titled "Auto Login to @State.AppTitle"<br />
+        - Use the link in the email to open Auto Login page of this site, and proceed to login.
+    </div>
+}
+
+@code {
+    [Parameter] public string ReturnTo { get; set; } = "";
+    CreateRequestModel Req { get; set; } = new CreateRequestModel();
+    List<string> ErrorMessages { get; set; } = new List<string>();
+
+    private string Status = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        ErrorMessages = new List<string>();
+    }
+
+    async Task OnSubmit()
+    {
+        ErrorMessages = new List<string>();
+        Status = "Sending...";
+        StateHasChanged();
+        await Task.Delay(1);
+        try
+        {
+            await api.CreateRequest(Req);
+            Status = "Sent";
+        }
+        catch (Exception ex) // return BadRequest when not authenticated
+        {
+            ErrorMessages.Add(ex.Message);
+            Status = "";
+            Console.WriteLine(ex.Message);
+        }
+    }
+}

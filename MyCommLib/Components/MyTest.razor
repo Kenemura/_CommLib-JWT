@@ -1,0 +1,8 @@
+﻿<h3>MyTest</h3>
+
+@typeparam TValue
+<InputDate @bind-Value="Date" />
+
+@code {
+    [Parameter] public TValue? Date { get; set; }
+}

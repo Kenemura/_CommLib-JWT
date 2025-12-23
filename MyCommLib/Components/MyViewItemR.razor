@@ -1,0 +1,14 @@
+﻿<tr>
+    <td class="MyItem">
+        @Name
+    </td>
+    <td class="text-right text-end" width="20%" nowrap>
+        @ChildContent
+    </td>
+    <td>&nbsp</td>
+</tr>
+
+@code {
+    [Parameter] public string Name { get; set; } = null!;
+    [Parameter] public RenderFragment ChildContent { get; set; } = null!;
+}

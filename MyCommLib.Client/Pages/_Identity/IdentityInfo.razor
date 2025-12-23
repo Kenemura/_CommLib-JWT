@@ -1,0 +1,29 @@
+﻿@page "/identity/identityinfo"
+@using System.Security.Claims
+
+<h3>Identity Info (Claims)</h3>
+
+<div>
+    Username: @State.CurrentUser.Username
+    Email: @State.CurrentUser.Email
+</div>
+
+<br/><br/>
+<h3>Claims</h3>
+@*<MyTable Items="State.CurrentUser.Claims" TItem="KeyValuePair<string, string>">*@
+<MyTable Items="State.CurrentUser.Claims" TItem="CurrentUserClaim">
+    <MyHeader>
+        <th>Key</th><th>Value</th>
+    </MyHeader>
+    <Row Context="item">
+        <td>@item.Type</td>
+        <td>@item.Value</td>
+    </Row>
+</MyTable>
+
+@code{
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+    }
+}

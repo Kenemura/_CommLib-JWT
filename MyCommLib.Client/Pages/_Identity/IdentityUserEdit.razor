@@ -1,0 +1,99 @@
+﻿@page "/Identity/User/Edit/{action}"
+@page "/Identity/User/Edit/{action}/{id}"
+@using MyCommLib.Shared.Models.Identity
+@attribute [Authorize(Roles = "Admins")]
+@inject IdentityApi api
+
+<p><span class="text-info">User @action</span></p>
+
+<EditForm Model="UserEdit" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <ul>
+        @foreach (string msg in ErrorMessages)
+        {
+            <li style="color: red">@msg</li>
+        }
+    </ul>
+    <div class="form-group">
+        <label class="MyFormLabel">Username:</label>
+        <InputText id="Username" class="form-control" @bind-Value="UserEdit.Username" Disabled="@(!IsCreate)" />
+    </div>
+    <div class="form-group">
+        <label class="MyFormLabel">Email:</label>
+        <InputText id="Email" class="form-control" @bind-Value="UserEdit.Email" Disabled="@(!IsEdit)" autofocus />
+    </div>
+    <div class="form-group">
+        <label class="MyFormLabel">Password:</label>
+        <InputText id="Password" class="form-control" Type="Password" @bind-Value="UserEdit.Password" Disabled="@(!IsEdit)" />
+    </div>
+    <div class="p-1">
+        @if (action == "create")
+        {
+            <button type="submit" class="btn btn-sm btn-primary">Create</button>
+        }
+        else if (action == "edit")
+        {
+            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+        }
+        else if (action == "delete")
+        {
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+        }
+        <a class="btn btn-sm btn-warning" href="Identity/Users/list">Cancel</a>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public string id { get; set; } = default!;
+    [Parameter] public string action { get; set; } = default!;
+    private bool IsCreate => (action == "create") ? true : false;
+    private bool IsEdit => (action == "create" || action == "edit") ? true : false;
+
+    public IdentityUserEditModel UserEdit { get; set; } = new IdentityUserEditModel();
+    public List<string> ErrorMessages { get; set; } = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ErrorMessages = new List<string>();
+        action = action.ToLower();
+        if (action != "create")
+        {
+            IdentityUserModel usr = await api.GetUser(id);
+            UserEdit.Id = usr.Id;
+            UserEdit.Username = usr.Username;
+            UserEdit.Email = usr.Email;
+            //UserEdit.Password = "";
+        }
+        else
+        {
+            //UserEdit.Username = "-"; // to prevent auto fill
+        }
+    }
+
+    public async Task HandleValidSubmit()
+    {
+        IdentityUser usr = new IdentityUser();
+        try
+        {
+            if (action == "create")
+            {
+                await api.CreateUser(UserEdit);
+            }
+            else if (action == "edit")
+            {
+                await api.UpdateUser(UserEdit);
+            }
+            else if (action == "delete")
+            {
+                await api.DeleteUser(UserEdit);
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessages.Add(ex.Message);
+            return;
+        }
+        NM.NavigateTo("Identity/Users/list");
+    }
+}

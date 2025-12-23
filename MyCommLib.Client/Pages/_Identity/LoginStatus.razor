@@ -1,0 +1,87 @@
+﻿@page "/identity/loginstatus"
+
+<p><span class="text-info">Account Login Status</span></p>
+
+@if (!State.IsAuthenticated)
+{
+    <div class="MyJumbotron">
+        <h4 class="text-info">
+            You are not logged in!
+        </h4>
+    </div>
+}
+else
+{
+    <div class="MyJumbotron">
+        <h4 class="text-info">
+            The table below shows your login information and Cookie data.<br />
+            Cookie data is an encrypted format of your password, which is used for automatic login.
+        </h4>
+    </div>
+
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <th>Name</th>
+                <td class="text-break">@State.CurrentUser.Username</td>
+            </tr>
+            <tr>
+                <th>Email</th>
+                <td class="text-break">@State.CurrentUser.Email</td>
+            </tr>
+            <tr>
+                <th>Cookie</th>
+                <td class="text-break">@authCookie</td>
+            </tr>
+        </tbody>
+    </table>
+}
+<div class="p-1">
+    <a class="btn btn-sm btn-primary" href="identity/login2">Retry Auto Login</a>
+</div>
+
+<div class="p-1">
+    <button class="btn btn-sm btn-danger" @onclick="DeleteCookies">Delete All Cookies</button>
+</div>
+@if (State.IsAdmin)
+{
+    <MyTable Items="cookies" TItem="KeyValuePair<string, string>">
+        <MyHeader>
+            <th>Key</th><th>Value</th>
+        </MyHeader>
+        <Row Context="cookie">
+            <td>@cookie.Key</td>
+            <td class="text-break">@cookie.Value</td>
+        </Row>
+    </MyTable>
+}
+
+@code {
+    private IEnumerable<KeyValuePair<string, string>> cookies = new List<KeyValuePair<string, string>>();
+    private clsCookieManager CookieMan = null!;
+    private string authCookie = null!;
+    const string authKey = ".AspNetCore.Identity.Application";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        CookieMan = new clsCookieManager(JS);
+        cookies = await CookieMan.GetAll();
+        authCookie = await CookieMan.Get(authKey);
+    }
+
+    private async Task<string> GetCookie(string key)
+    {
+        var x = await CookieMan.Get(key);
+        return await CookieMan.Get(key);
+    }
+    private async Task GetCookies()
+    {
+        cookies = await CookieMan.GetAll();
+    }
+    private async Task DeleteCookies()
+    {
+        await CookieMan.DeleteAll();
+        await JS.InvokeVoidAsync("restartApp");
+    }
+}

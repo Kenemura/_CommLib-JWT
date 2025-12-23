@@ -1,0 +1,6 @@
+﻿
+@((MarkupString)(Text ?? "").Replace("\n", "<br/>"))
+
+@code {
+    [Parameter] public string Text { get; set; } = null!;
+}

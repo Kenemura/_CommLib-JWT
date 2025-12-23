@@ -1,0 +1,69 @@
+﻿@page "/identity/login2"
+@inject xAuthService auth
+@inject HttpClient Http
+
+<br/>
+@if (String.IsNullOrEmpty(Username) || String.IsNullOrEmpty(Password))
+{
+    <MySpinner>Wait a moment</MySpinner>
+}
+else
+{
+    <div class="alert alert-info mt-5">Login as @Username</div>
+    @if (State.IsAdmin || State.IsDevelopment)
+    {
+        <div>Password: @Password</div>
+    }
+    
+    <div>
+        <ul>
+            @foreach (string msg in ErrorMessages)
+            {
+                <li style="color: red">@msg</li>
+            }
+        </ul>
+    </div>
+    <button class="btn btn-sm btn-primary" @onclick="TryLogin">Login</button>
+    <a class="btn btn-sm btn-warning" href="Index">Cancel</a>
+}
+
+@code {
+    [Parameter] public string ReturnTo { get; set; } = "Index";
+    [Parameter][SupplyParameterFromQuery] public string IsDebug { get; set; } = "";
+    List<string> ErrorMessages { get; set; } = new List<string>();
+    private string Username = "";
+    private string Password = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        var rm = new clsRememberMeW(Http, JS);
+        (Username, Password) = await rm.Get();
+        if (String.IsNullOrEmpty(Username) || String.IsNullOrEmpty(Password))
+        {
+            NM.NavigateTo(ReturnTo);
+        }
+        else
+        {
+            await TryLogin();
+            NM.NavigateTo(ReturnTo);
+        }
+    }
+
+    async Task TryLogin()
+    {
+        var req = new LoginModel() { Username = Username, Password = Password, RememberMe = true };
+        try
+        {
+            var rmPassword = await auth.Login2(req);
+            var rm = new clsRememberMeW(Http, JS);
+            await rm.Set(req.Username, rmPassword);
+        }
+        catch (Exception ex) // return BadRequest when not authenticated
+        {
+            ErrorMessages.Add($"Something went wrong ({ex.Message})!");
+            return;
+        }
+        NM.NavigateTo(ReturnTo);
+    }
+}

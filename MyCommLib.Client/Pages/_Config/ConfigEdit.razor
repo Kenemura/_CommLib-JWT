@@ -1,0 +1,141 @@
+﻿@page "/Config/Edit/{action}/{id:Guid}/{Category}"
+@using Microsoft.AspNetCore.Identity
+@using System.ComponentModel.DataAnnotations
+@attribute [Authorize(Roles = "Admins")]
+@inject ConfigApi api
+
+<MyPageHeader>@action Config</MyPageHeader>
+@if(EntityEdit is null)
+{
+    <div class="alert alert-danger">Loading...</div>
+}
+else
+{
+    <EditForm Model="EntityEdit" OnValidSubmit="HandleValidSubmit" FormName="EntityEdit">
+        <div class="p-1">
+            @if (action == "View")
+            {
+                <a class="btn btn-sm btn-outline-warning" href="Config/List/@Category">Back</a>
+                @if(State.IsAdminUser)
+                {
+                    <span></span>
+                    <a class="btn btn-sm btn-primary" href="Config/Edit/Edit/@Id/@Category">Edit</a>
+                    <a class="btn btn-sm btn-primary" href="Config/Edit/Delete/@Id/@Category">Delete</a>
+                }
+            }
+            else if(action == "Delete")
+            {
+                <span class="text-danger">Are you suer to delete this Instalment?</span>
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                <a class="btn btn-sm btn-warning" href="Config/Edit/View/@Id/@Category">Cancel</a>
+            }
+        </div>
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <ul>
+            @foreach (string msg in ErrorMessages)
+            {
+                <li style="color: red">@msg</li>
+            }
+        </ul>
+        <table width="100%">
+            <MyFormItemTR Name="Key:">
+                <InputText class="form-control" @bind-Value="@EntityEdit.Key" Disabled="@IsDisabled" />
+            </MyFormItemTR>
+            <MyFormItemTR Name="Value:">
+                <InputText class="form-control" @bind-Value="@EntityEdit.Value" Disabled="@IsDisabled" />
+            </MyFormItemTR>
+            <MyFormItemTR>
+                <br/>
+                @if(action == "Create")
+                {
+                    <button type="submit" class="btn btn-sm btn-primary">Create</button>
+                    <a class="btn btn-sm btn-warning" href="Config/List/@Category">Cancel</a>
+                }
+                else if (action == "Edit")
+                {
+                    <button class="btn btn-sm btn-primary" type="submit">Save</button>
+                    <button class="btn btn-sm btn-warning" @onclick="CancelEdit">Cancel</button>
+                }
+            </MyFormItemTR>
+        </table>
+    </EditForm>
+}
+
+@code {
+    private bool IsDisabled => (action == "Delete" || action == "View") ? true : false;
+
+    [Parameter] public string Id { get; set; } = String.Empty;
+    [Parameter] public string action { get; set; } = null!;
+    [Parameter] public string Category { get; set; } = string.Empty;
+
+    private ConfigKVP EntityEdit = null!;
+    private ConfigKVP EntityBase = null!;
+    public List<string> ErrorMessages { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        EntityEdit = new();
+        if (action == "Create")
+        {
+            EntityBase = new();
+            EntityBase.CopyTo(EntityEdit);
+        }
+        else
+        {
+            var id = new Guid(Id);
+            EntityBase = await api.Get(id);
+            if (EntityBase.Id != id) throw new Exception("Not Found!");
+            EntityBase.CopyTo(EntityEdit);
+        }
+    }
+    private void CancelEdit()
+    {
+        EntityBase.CopyTo(EntityEdit);
+        NM.NavigateTo($"Config/Edit/View/{Id}/{Category}");
+    }
+    public async Task HandleValidSubmit()
+    {
+        ErrorMessages = new();
+        if (action == "Create")
+        {
+            try
+            {
+                var result = await api.Create(EntityEdit);
+                var id = result;
+                EntityEdit.CopyTo(EntityBase);
+                NM.NavigateTo($"Config/Edit/View/{id}/{Category}");
+            }
+            catch (Exception ex)
+            {
+                ErrorMessages.Add(ex.Message);
+            }
+        }
+        else if (action == "Edit")
+        {
+            try
+            {
+                await api.Update(EntityEdit);
+                EntityEdit.CopyTo(EntityBase);
+                NM.NavigateTo($"Config/Edit/View/{Id}/{Category}");
+            }
+            catch (Exception ex)
+            {
+                ErrorMessages.Add(ex.Message);
+            }
+        }
+        else if (action == "Delete")
+        {
+            try
+            {
+                await api.Delete(EntityEdit);
+                NM.NavigateTo($"Config/List/{Category}");
+            }
+            catch (Exception ex)
+            {
+                ErrorMessages.Add(ex.Message);
+            }
+        }
+    }
+}

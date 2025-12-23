@@ -1,0 +1,18 @@
+﻿@if (ListItems is not null)
+{
+    @foreach (var item in ListItems)
+    {
+        if (item.Cols > 0)
+        {
+            <th nowrap width="@GetWidth(item)" colspan="@GetCols(item)" class="text-info @GetAlign(item)"><small>@item.Name</small></th>
+        }
+    }
+}
+
+@code {
+    [Parameter] public List<clsListItem> ListItems { get; set; } = null!;
+
+    private string GetAlign(clsListItem item) => (item.Align == "R") ? "text-end" : (item.Align == "C") ? "text-center" : "";
+    private string GetWidth(clsListItem item) => (item.Width > 0) ? $"{item.Width}%" : "";
+    private string GetCols(clsListItem item) => (item.Cols > 1) ? $"{item.Cols}" : "";
+}

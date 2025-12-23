@@ -1,0 +1,98 @@
+﻿@page "/Identity/Users/List"
+@using MyCommLib.Shared.Models.Identity
+@attribute [Authorize(Roles = "Admins")]
+@inject IdentityApi api
+@inject xAuthService auth
+
+<p><span class="text-info">User List</span></p>
+<div class="p-1">
+    <a href="Identity/User/Edit/create" class="btn btn-sm btn-primary">Create</a>
+</div>
+
+@if (PageList is null)
+{
+    <div>Loading...</div>
+}
+else
+{
+    <div class="p-1">
+        <MyPagenation Paging="Paging" PageChanged="@(page => PageTo(page))"></MyPagenation>
+        <span class="text-info">Sel Role:</span>
+        <select value="@SelectedRole" @onchange="SelRole">
+            <option value="-" selected>-</option>
+            @foreach (var role in Roles)
+            {
+                var sel = role.Name == SelectedRole;
+                <option value="@role.Name" selected="@sel">@role.Name</option>
+            }
+        </select>
+    </div>
+
+    <MyTable Items="PageList" TItem="IdentityUserModel">
+        <MyHeader>
+            <th>Name</th>
+            <th>Email</th>
+            <th></th>
+        </MyHeader>
+        <Row Context="usr">
+            <td nowrap>@usr.Username</td>
+            <td>@usr.Email</td>
+            <td class="text-left py-0">
+                <a href="@GetEditUrl(@usr.Id!)" class="btn btn-sm btn-primary">Edit</a>
+                <a href="@GetRolesUrl(@usr.Id!)" class="btn btn-sm btn-secondary">Roles</a>
+                <a href="@GetDeleteUrl(@usr.Id!)" class="btn btn-sm btn-danger">Delete</a>
+                <button class="btn btn-sm btn-warning" @onclick="@(() => LoginAs(usr.Username!))">Login</button>
+            </td>
+        </Row>
+    </MyTable>
+}
+
+@code {
+    private List<IdentityRoleModel> Roles { get; set; } = new List<IdentityRoleModel>();
+    private List<IdentityUserModel> PageList { get; set; } = null!;
+    private string SelectedRole = "-";
+
+    public MyPagenationModel Paging { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        Roles = await api.GetRoles();
+        await GetUsersListed();
+    }
+    private async Task GetUsersListed()
+    {
+        var count = await api.GetUsersCount(SelectedRole);
+        Paging = new MyPagenationModel(count, 16);
+        await PageTo(1);
+    }
+    private async Task SelRole(ChangeEventArgs e)
+    {
+        SelectedRole = (e.Value as string) ?? "";
+        await GetUsersListed();
+    }
+    private async Task LoginAs(string userName)
+    {
+        var req = new LoginModel() { Username = userName, Password = "-" };
+        await auth.LoginAs(req);
+        NM.NavigateTo("index");
+    }
+
+    string GetEditUrl(string id) => $"Identity/User/Edit/edit/{id}";
+    string GetRolesUrl(string id) => $"Identity/User/Roles/{id}";
+    string GetDeleteUrl(string id) => $"Identity/User/Edit/delete/{id}";
+
+    private async Task PageTo(int page)
+    {
+        if (page < 0 || page > Paging.TotalPages) page = 1;
+        if (page == 0) // All
+        {
+            PageList = await api.GetUsers(SelectedRole, Paging.TotalSize, 1);
+        }
+        else
+        {
+            Paging.CurrentPage = page;
+            PageList = await api.GetUsers(SelectedRole, Paging.PageSize, Paging.CurrentPage);
+        }
+    }
+}

@@ -1,0 +1,56 @@
+﻿@page "/MyAccount/Logout"
+@attribute [Authorize]
+
+@using System.ComponentModel.DataAnnotations;
+@using Microsoft.AspNetCore.Identity;
+@using MyCommLib.Server.Data;
+
+@inject SignInManager<IdentityUser> SignInManager
+
+<PageTitle>Logout</PageTitle>
+<MyPageHeader>Logout</MyPageHeader>
+
+<div class="alert alert-warning mt-5">Are you sure to Logout?</div>
+<p class="text-danger">If you Logout, your Auto-Login status will be reset. If you are to use this app again, you'd better not Logout.</p>
+
+@if (HttpContext.User.Identity!.IsAuthenticated)
+{
+    <div>
+        <EditForm Model="Input" OnValidSubmit="LogoutUser" FormName="logout">
+            <InputText type="hidden" @bind-Value="Input!.Dummy" class="form-control" />
+            <button type="submit" class="btn btn-sm btn-primary">
+                Logout
+            </button>
+            <a class="btn btn-sm btn-warning" href="@ReturnTo">Cancel</a>
+        </EditForm>
+    </div>
+}
+else
+{
+    <p>You are not authenticated!</p>
+}
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromForm] private InputModel? Input { get; set; }
+    [SupplyParameterFromQuery] private string? ReturnTo { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        Input ??= new();
+        ReturnTo ??= MyAppInfo.HomePath;
+    }
+
+    public async Task LogoutUser()
+    {
+        await Task.CompletedTask;
+        await SignInManager.SignOutAsync();
+        NM.NavigateTo(MyAppInfo.HomePath);
+    }
+
+    private sealed class InputModel
+    {
+        public string Dummy { get; set; } = "dummy";
+    }
+}

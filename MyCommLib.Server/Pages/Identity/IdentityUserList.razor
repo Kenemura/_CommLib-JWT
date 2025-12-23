@@ -1,0 +1,104 @@
+﻿@page "/Server/IdentityUser/List"
+@page "/Server/IdentityUser/List/{PageNo:int}"
+
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using MyCommLib.Shared.Interfaces
+@using MyCommLib.Shared.Models.MyAccount
+@attribute [Authorize(Roles = "Admins")]
+@inject IIdentityApi api
+
+<MyPageHeader>Identity User List</MyPageHeader>
+
+<EditForm Model="Sel" OnValidSubmit="HandleValidSubmit" FormName="SelForm">
+    <div class="row align-items-center g-1 my-2">
+        <div class="col-auto">
+            <a class="btn btn-sm btn-primary" href="@UrlCreate">Create</a>
+        </div>
+        <div class="col-auto">&nbsp;</div>
+        <div class="col-auto">
+            <InputSelect class="form-control form-control-sm" @bind-Value="@Input!.Role">
+                <option value="-" selected="@(Input!.Role == "-")">&lt;Select Role&gt;</option>
+                @foreach (var role in Roles)
+                {
+                    <option value="@role.Name" selected="@(role.Name == SelRole)">@role.Name</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-sm btn-primary" type="submit">Sel</button>
+            <a class="btn btn-sm btn-warning" href="Server/IdentityUser/List">Reset</a>
+        </div>
+    </div>
+</EditForm>
+
+@if (PageList is null)
+{
+    <div>Loading...</div>
+}
+else
+{
+    <div class="p-1">
+        <MyPagenationServer Paging="Sel!.Paging" UrlPaging="@UrlPaging" />
+    </div>
+    <MyTable Items="PageList" TItem="IdentityUserModel">
+        <MyHeader>
+            <th>Name</th>
+            <th>Email</th>
+            <th></th>
+        </MyHeader>
+        <Row Context="usr">
+            <td nowrap>@usr.Username</td>
+            <td>@usr.Email</td>
+            <td class="text-left py-0">
+                <a href="@UrlEdit(@usr.Id!)" class="btn btn-sm btn-primary">Edit</a>
+                <a href="@UrlRoles(@usr.Id!)" class="btn btn-sm btn-secondary">Roles</a>
+                <a href="@UrlDelete(@usr.Id!)" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </Row>
+    </MyTable>
+}
+
+@code {
+    string UrlPaging(int page) => $"Server/IdentityUser/List/{page}?SelRole={SelRole}";
+    string UrlCreate => $"Server/IdentityUser/Edit/Create?SelRole={SelRole}";
+    string UrlEdit(string id) => $"Server/IdentityUser/Edit/edit/{id}?SelRole={SelRole}";
+    string UrlRoles(string id) => $"Server/IdentityUser/Roles/{id}?SelRole={SelRole}";
+    string UrlDelete(string id) => $"Server/IdentityUser/Edit/delete/{id}?SelRole={SelRole}";
+
+    [Parameter] public int PageNo { get; set; }
+    [SupplyParameterFromQuery(Name = "SelRole")] public string? SelRole { get; set; }
+    [SupplyParameterFromForm] public SelIdentityUserModel? Input { get; set; }
+    private SelIdentityUserModel? Sel { get; set; } = new();
+    private List<IdentityRoleModel> Roles { get; set; } = new List<IdentityRoleModel>();
+    private List<IdentityUserModel> PageList { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        SelRole ??= "-";
+        if (Input is null) // when not submit
+        {
+            Input = new();
+            Input.Role = SelRole;
+        }
+        Roles = await api.GetRoles();
+        await SetPageList();
+    }
+    private async Task HandleValidSubmit()
+    {
+        SelRole = Input!.Role;
+        PageNo = 1;
+        await SetPageList();
+    }
+    private async Task SetPageList()
+    {
+        Sel = new();
+        Sel.Role = SelRole;
+        Sel.Paging.TotalSize = await api.GetUsersCount(Sel);
+        Sel.Paging.PageSize = 5;
+        if (PageNo == 0) PageNo = 1;
+        Sel.Paging.CurrentPage = PageNo;
+        PageList = await api.GetUsers(Sel);
+    }
+}

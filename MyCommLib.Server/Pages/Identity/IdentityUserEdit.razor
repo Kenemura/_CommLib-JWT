@@ -1,0 +1,103 @@
+﻿@page "/Server/IdentityUser/Edit/{action}"
+@page "/Server/IdentityUser/Edit/{action}/{id}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using MyCommLib.Shared.Models.MyAccount
+@attribute [Authorize(Roles = "Admins")]
+@inject IIdentityApi api
+
+<MyPageHeader>Identity User @action</MyPageHeader>
+
+<EditForm Model="UserEdit" OnValidSubmit="HandleValidSubmit" FormName="UserEdit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <ul>
+        @foreach (string msg in ErrorMessages)
+        {
+            <li style="color: red">@msg</li>
+        }
+    </ul>
+    <div class="form-group">
+        <label class="MyFormLabel">Username:</label>
+        <InputText id="UserName" class="form-control" @bind-Value="UserEdit!.Username" Disabled="@(!IsCreate)" autofocus/>
+    </div>
+    <div class="form-group">
+        <label class="MyFormLabel">Email:</label>
+        <InputText id="xEmail" class="form-control" @bind-Value="UserEdit!.Email" Disabled="@(!IsEdit)" />
+    </div>
+    <div class="form-group">
+        <label class="MyFormLabel">Password:</label>
+        <InputText id="xPassword" class="form-control" Type="Password" @bind-Value="UserEdit!.Password" Disabled="@(!IsEdit)" />
+    </div>
+    <div class="p-1">
+        @if (action == "create")
+        {
+            <button type="submit" class="btn btn-sm btn-primary">Create</button>
+        }
+        else if (action == "edit")
+        {
+            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+        }
+        else if (action == "delete")
+        {
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+        }
+        <a class="btn btn-sm btn-warning ms-1" href="Server/IdentityUser/List?SelRole=@SelRole">Cancel</a>
+    </div>
+</EditForm>
+
+@code {
+    private bool IsCreate => (action == "create") ? true : false;
+    private bool IsEdit => (action == "create" || action == "edit") ? true : false;
+
+    [Parameter] public string id { get; set; } = default!;
+    [Parameter] public string action { get; set; } = default!;
+    [SupplyParameterFromForm] public IdentityUserModel? UserEdit { get; set; }
+    [SupplyParameterFromQuery(Name = "SelRole")] public string? SelRole { get; set; }
+    public List<string> ErrorMessages { get; set; } = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ErrorMessages = new List<string>();
+        action = action.ToLower();
+        UserEdit ??= new();
+        IdentityUserModel usr = await api.GetUser(id);
+        if (action == "create")
+        {
+            // UserEdit.UserName ??= "-"; // to prevent auto fill
+            UserEdit.Email ??= "-"; // to prevent auto fill
+        }
+        else
+        {
+            UserEdit.Id ??= usr.Id;
+            UserEdit.Username ??= usr!.Username!;
+            UserEdit.Email ??= usr!.Email!;
+        }
+    }
+
+    public async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (action == "create")
+            {
+                await api.CreateUser(UserEdit!);
+            }
+            else if (action == "edit")
+            {
+                await api.UpdateUser(UserEdit!);
+            }
+            else if (action == "delete")
+            {
+                await api.DeleteUser(UserEdit!);
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessages.Add(ex.Message);
+            return;
+        }
+        NM.NavigateTo($"Server/IdentityUser/List?SelRole={SelRole}");
+    }
+}

@@ -1,0 +1,21 @@
+﻿@page "/Server/IdentityUser/SetRole/{Id}/{Action}/{Role}"
+@using MyCommLib.Shared.Models.MyAccount
+@inject IIdentityApi api
+
+<MyPageHeader>IdentityUserSetRole</MyPageHeader>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public string? Action { get; set; }
+    [Parameter] public string? Role { get; set; }
+    [SupplyParameterFromQuery(Name = "SelRole")] public string? SelRole { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        var ur = new IdentityUserRoleModel() { Id = Id!, Role = Role!, IsInRole = (Action == "Add") };
+        await api.SetUserRole(ur);
+
+        NM.NavigateTo($"Server/IdentityUser/Roles/{Id}?SelRole={SelRole ?? "-"}");
+    }
+}

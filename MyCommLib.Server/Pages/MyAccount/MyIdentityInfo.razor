@@ -1,0 +1,49 @@
+﻿@page "/MyAccount/IdentityInfo"
+@page "/MyAccount/IdentityInfo/{Preserve:bool}"
+@using System.Security.Claims
+
+<MyPageHeader>Identity Info (Claims) (Server)</MyPageHeader>
+
+<div>
+    Username: @user.Identity?.Name
+    Email: @(user.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value ?? "");
+</div>
+
+<br />
+<br />
+<h3>Claims</h3>
+<MyTable Items="claims" TItem="Claim">
+    <MyHeader>
+        <th>Key</th><th>Value</th>
+    </MyHeader>
+    <Row Context="item">
+        <td>@item.Type</td>
+        <td>@item.Value</td>
+    </Row>
+</MyTable>
+<div>
+    &lt;User(ClaimsPrincipal)&gt;
+    (Preserve:<a class="btn btn-sm btn-primary" href="MyAccount/IdentityInfo/@(!Preserve)">@(Preserve)</a>)
+</div>
+
+<div class="container-fluid border">
+    <pre>
+        @UserJson
+    </pre>
+</div>
+
+@code {
+    private ClaimsPrincipal user = new();
+    private IEnumerable<Claim>? claims;
+    [Parameter] public bool Preserve { get; set; } = true;
+    private string UserJson = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        user = State.GetUser();
+        claims = user.Claims.ToList();
+
+        UserJson = user.ToJson(Preserve);
+    }
+}

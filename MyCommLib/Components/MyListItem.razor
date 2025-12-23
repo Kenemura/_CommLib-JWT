@@ -1,0 +1,23 @@
+﻿
+@if (GetItem().NoWrap)
+{
+    <td nowrap class="@GetClass(GetItem())" @attributes="AdditionalAttributes" >
+        @ChildContent
+    </td>
+}
+else
+{
+    <td class="@GetClass(GetItem())" @attributes="AdditionalAttributes" >
+        @ChildContent
+    </td>
+}
+
+@code {
+    [Parameter] public IEnumerable<clsListItem> ListItems { get; set; } = null!;
+    [Parameter] public string Item { get; set; } = "";
+    [Parameter] public RenderFragment ChildContent { get; set; } = null!;
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object> AdditionalAttributes { get; set; } = null!;
+
+    private string GetClass(clsListItem item) => (item.Align == "R") ? "text-right text-end" : (item.Align == "C") ? "text-center" : "";
+    private clsListItem GetItem() => ListItems.OrderBy(x => x.Item).FirstOrDefault(x => x.Item == Item)!;
+}

@@ -1,0 +1,44 @@
+﻿@page "/Server/IdentityRole/List"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using MyCommLib.Shared.Models.MyAccount
+@attribute [Authorize(Roles = "Admins")]
+@inject IIdentityApi api
+
+<MyPageHeader>Identity Role List</MyPageHeader>
+
+<div class="p-1">
+    <a href="Server/IdentityRole/Edit/create" class="btn btn-sm btn-primary">Create</a>
+</div>
+
+@if (PageList is null)
+{
+    <div>Loading...</div>
+}
+else
+{
+    <MyTable Items="PageList" TItem="IdentityRoleModel">
+        <MyHeader>
+            <th>Name</th>
+            <th></th>
+        </MyHeader>
+        <Row Context="role">
+            <td nowrap>@role.Name</td>
+            <td class="text-left py-0">
+                <a href="@GetDeleteUrl(@role.Id!)" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </Row>
+    </MyTable>
+}
+
+@code {
+    string GetDeleteUrl(string id) => $"Server/IdentityRole/Edit/delete/{id}";
+
+    private List<IdentityRoleModel> PageList { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        PageList = await api.GetRoles();
+    }
+}

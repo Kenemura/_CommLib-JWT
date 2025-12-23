@@ -1,0 +1,81 @@
+﻿@page "/Identity/User/Roles/{id}"
+@using MyCommLib.Shared.Models.Identity
+@attribute [Authorize(Roles = "Admins")]
+@inject IdentityApi api
+@inject xAuthService auth
+
+<div class="m-2">
+    <a class="btn btn-sm btn-outline-warning" href="Identity/Users/list">Back</a>
+</div>
+@if (User != null)
+{
+    <table class="">
+        <tr>
+            <td class="MyItem">Username:</td>
+            <td>@User.Username</td>
+        </tr>
+        <tr>
+            <td class="MyItem">Email:</td>
+            <td>@User.Email</td>
+        </tr>
+    </table>
+    <br/>
+
+    <table class="table table-sm table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Role</th>
+                <th>Assigned</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (IdentityRoleModel role in Roles)
+            {
+                <tr>
+                    <td nowrap>@role.Name</td>
+                    <td nowrap>@(UserInRole[role.Name!] ? "Yes" : "")</td>
+                    <td class="text-left" style="padding: 0px">
+                        <button type="button" class="btn btn-sm btn-primary" @onclick="@((e) => AddRemoveRoleAsync(role))">
+                            @(UserInRole[role.Name!] ? "Remove" : "Add")
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = null!;
+    public IdentityUserModel User { get; set; } = null!;
+    public IEnumerable<IdentityRoleModel> Roles { get; set; } = null!;
+
+    public IDictionary<string, bool> UserInRole = new Dictionary<string, bool>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        User = await api.GetUser(Id);
+        Roles = await api.GetRoles();
+        foreach (var role in Roles)
+        {
+            UserInRole.Add(role.Name!, await api.UserIsInRole(User!.Id!, role.Name!));
+        }
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.CompletedTask;
+    }
+    public async Task AddRemoveRoleAsync(IdentityRoleModel role)
+    {
+        UserInRole[role.Name!] = !UserInRole[role.Name!];
+        var ur = new IdentityUserRoleModel() { Id = User!.Id!, Role = role.Name!, IsInRole = UserInRole[role.Name!] };
+        await api.SetUserRole(ur);
+
+        if (State.CurrentUser.Username == User.Username)
+        {
+            var req = new LoginModel() { Username = User.Username, Password = "-" };
+            await auth.LoginAs(req);
+        }
+    }
+}

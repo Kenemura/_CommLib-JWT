@@ -1,0 +1,105 @@
+﻿@page "/Server/Config/List"
+@page "/Server/Config/List/{Category}"
+@using MyCommLib.Shared.Interfaces
+@using MyCommLib.Shared.Models
+
+@attribute [Authorize(Roles = "Admins")]
+@inject IConfigApi api
+
+<MyPageHeader>Config List</MyPageHeader>
+
+<EditForm Model="Sel" OnValidSubmit="HandleValidSubmit" FormName="SelConfig">
+    <div class="row align-items-center g-1 my-2">
+        <div class="col-auto">
+            <a class="btn btn-sm btn-primary" href="Server/Config/Edit/Create/@Guid.NewGuid()/@(Sel!.Category ?? "-")">Create New Config</a>
+        </div>
+        <div class="col-auto">&nbsp;</div>
+        <div class="col-auto">
+            <InputSelect class="form-control form-control-sm" @bind-Value="@Sel!.Category">
+                <option value="-" selected="@(Category == "-")">&lt;Select Category&gt;</option>
+                @foreach (var cat in categories)
+                {
+                    <option value="@cat" selected="@(Category == cat)">@cat</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-sm btn-primary" type="submit">Sel</button>
+            <a class="btn btn-sm btn-warning" href="Server/Config/List/-">Reset</a>
+        </div>
+    </div>
+</EditForm>
+@if (PageList == null)
+{
+    <div class="alert alert-info">Loading...</div>
+}
+else
+{
+    <MyTable Items="PageList" TItem="ConfigKVP">
+        <MyHeader>
+            <th>Key</th><th>Value</th><th></th>
+        </MyHeader>
+        <Row>
+            <td><a href="Server/Config/Edit/View/@context.Id/@Category">@context.Key</a></td>
+            <td>@context.Value</td>
+            <td nowrap class="text-left py-0">
+            </td>
+        </Row>
+    </MyTable>
+}
+
+@code {
+    [Parameter] public string? Category { get; set; }
+    [SupplyParameterFromForm] public SelModel? Sel { get; set; }
+
+    private IEnumerable<ConfigKVP> ConfigKVPs = Enumerable.Empty<ConfigKVP>();
+    private IEnumerable<ConfigKVP> PageList = Enumerable.Empty<ConfigKVP>();
+    private List<string> categories = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sel ??= new();
+        Category ??= "-";
+        ConfigKVPs = await api.GetList();
+        SetPageList();
+        SetCategories();
+    }
+    private void HandleValidSubmit()
+    {
+        Category = Sel!.Category ?? "-";
+        SetPageList();
+    }
+    private void SetPageList()
+    {
+        PageList = ConfigKVPs;
+        if (Category != "-")
+        {
+            PageList = ConfigKVPs.Where(x => x.Key.StartsWith(Category!));
+        }
+    }
+
+    private void SetCategories()
+    {
+        foreach (var kvp in ConfigKVPs)
+        {
+            var cats = kvp.Key.Split(":");
+            var cat = cats[0];
+            if (!categories.Contains(cat)) categories.Add(cat);
+            if (cats.Length > 2)
+            {
+                cat = cats[0] + ":" + cats[1];
+            }
+            if (!categories.Contains(cat)) categories.Add(cat);
+            if (cats.Length > 3)
+            {
+                cat = cats[0] + ":" + cats[1] + ":" + cats[2];
+            }
+            if (!categories.Contains(cat)) categories.Add(cat);
+        }
+    }
+
+    public class SelModel
+    {
+        public string? Category { get; set; }
+    }
+}

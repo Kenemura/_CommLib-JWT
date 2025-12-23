@@ -1,0 +1,31 @@
+﻿
+@if (IsDisabled)
+{
+    <input class="form-control" value="@DispValue" @attributes="AdditionalAttributes" />
+}
+else
+{
+    <input class="form-control" type="date" value="@Value" @onchange="OnChanged" @attributes="AdditionalAttributes" />
+}
+
+@code {
+    [Parameter] public DateTime Value { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object> AdditionalAttributes { get; set; } = null!;
+    [Parameter] public EventCallback<DateTime> ValueChanged { get; set; }
+    [Parameter] public string Format { get; set; } = "dd MMM yyyy";
+
+    private async Task OnChanged(ChangeEventArgs e)
+    {
+        DateTime val = DateTime.MinValue;
+        DateTime.TryParse(e.Value?.ToString(), out val);
+        await ValueChanged.InvokeAsync(val);
+    }
+    private string DispValue
+    {
+        get
+        {
+            return Value.ToString(Format, (new clsCultureInfo()).ci);
+        }
+    }
+    private bool IsDisabled => (AdditionalAttributes == null) ? false : (AdditionalAttributes["Disabled"].ToString() == "True");
+}

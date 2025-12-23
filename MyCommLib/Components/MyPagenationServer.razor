@@ -1,0 +1,63 @@
+﻿
+@if (Paging?.TotalPages >= 1)
+{
+    <div class="btn-group btn-group-sm">
+        <a class="btn btn-outline-primary" href="@UrlPaging(1)" disabled="@Disabled("back")">Top</a>
+        @if (!Disabled("back"))
+        {
+            <a class="btn btn-outline-primary" href="@UrlPaging(@Paging.Prev)" disabled="@Disabled("back")">Prev</a>
+        }
+        else
+        {
+            <button class="btn btn-outline-primary" disabled>Prev</button>
+        }
+        <button class="btn btn-outline-primary" disabled>Page: @DispNofN</button>
+        @if (!Disabled("forward"))
+        {
+            <a class="btn btn-outline-primary" href="@UrlPaging(@Paging.Next)" disabled="@Disabled("forward")">Next</a>
+        }
+        else
+        {
+            <button class="btn btn-outline-primary" disabled>Next</button>
+        }
+        <a class="btn btn-outline-primary" href="@UrlPaging(@Paging.TotalPages)">Last</a>
+        @if (Paging.CurrentPage > 0)
+        {
+            if (!IsAllDisabled)
+            {
+                <a class="btn btn-outline-primary" href="@UrlPaging(-1)" disabled="@IsAllDisabled">All</a>
+            }
+            else
+            {
+                <button class="btn btn-outline-primary" disabled>All</button>
+            }
+        }
+        else
+        {
+            <a class="btn btn-outline-primary" href="@UrlPaging(1)">Back</a>
+        }
+    </div>
+}
+
+@code {
+    private string DispNofN => (Paging.CurrentPage > 0) ? $"{Paging.CurrentPage} of {Paging.TotalPages}" : "(All)";
+    private bool IsAllDisabled => (Paging.TotalPages == 1 || Paging.TotalSize > 1000);
+
+    [Parameter] public MyPagenationModel Paging { get; set; } = null!;
+    [Parameter] public Func<int, string> UrlPaging { get; set; } = default!; // Func(int page) returns url to link to
+
+    private bool Disabled(string action)
+    {
+        if (Paging.CurrentPage < 0) return true;
+        bool IsDisabled = false;
+        if (action == "back" && Paging.CurrentPage == 1)
+        {
+            IsDisabled = true;
+        }
+        else if (action == "forward" && Paging.CurrentPage == Paging.TotalPages)
+        {
+            IsDisabled = true;
+        }
+        return IsDisabled;
+    }
+}

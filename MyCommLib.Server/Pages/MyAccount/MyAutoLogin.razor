@@ -1,0 +1,135 @@
+﻿@page "/MyAccount/AutoLogin"
+@page "/MyAccount/AutoLogin/{result}"
+
+@using Microsoft.AspNetCore.Authentication
+@using MyCommLib.Shared.Classes
+
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+@inject ILogger<MyAutoLogin> Logger
+
+<br />
+@if (!String.IsNullOrEmpty(Result))
+{
+    <div class="alert alert-info mt-5">You are logged in!</div>
+    <a class="btn btn-outline-primary" href="@MyAppInfo.HomePath">Go to Home Page</a>
+    <hr />
+    <div class="text-info">
+        You can <a class="btn btn-outline-primary" href="MyAccount/ChangePassword">change your password here</a>
+        so that you can login manually with your password next time.
+    </div>
+    <hr />
+}
+else
+{
+    <div class="alert alert-info mt-5">Auto Login (Just click Log In button to go ahead)</div>
+
+    <EditForm class="form-signin" OnValidSubmit="HandleValidSubmit" Model="Input" FormName="AutoLogin">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <ul>
+            @foreach (string msg in ErrorMessages)
+            {
+                <li style="color: red">@msg</li>
+            }
+        </ul>
+
+        <div class="form-group">
+            <label class="MyFormLabel">Username:</label>
+            <InputText class="form-control" @bind-Value="@Input!.UserName" disabled />
+            <input type="hidden" name="Input.UserName" value="@Input!.UserName" />
+        </div>
+
+        <div class="form-group">
+            <label class="MyFormLabel">Email:</label>
+            <InputText class="form-control" @bind-Value="@Input!.Email" disabled />
+            <input type="hidden" name="Input.Email" value="@Input!.Email" />
+        </div>
+        <div class="alert alert-danger my-3">
+            <div class="form-check">
+                <label class="form-check-label">
+                    <InputCheckbox class="form-check-input" @bind-Value="@Input!.RememberMe" />
+                    Remember Me:
+                </label>
+            </div>
+            <div>
+                Do not tick <b>Remember Me</b> if you are on a public device.
+                <br />And, make sure to Logout when you finish.
+            </div>
+        </div>
+        <input type="hidden" name="Input.UserId" value="@Input.UserId" />
+        <div class="my-2">
+            <button class="btn btn-primary btn-sm" type="submit">Log In</button>
+            <a class="btn btn-sm btn-warning" href="@ReturnTo">Cancel</a>
+        </div>
+
+    </EditForm>
+}
+
+@code {
+    [Parameter] public string Result { get; set; } = "";
+    [SupplyParameterFromQuery] public string? ReturnTo { get; set; }
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromForm] private InputModel? Input { get; set; }
+
+    List<string> ErrorMessages { get; set; } = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            // Clear the existing external cookie to ensure a clean login process
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+        if (Input is null)
+        {
+            Input ??= new();
+            var qs = new clsQueryString(NM);
+            Input.UserName = qs.GetValue("UserName");
+            Input.Email = qs.GetValue("Email");
+            Input.UserId = qs.GetValue("UserId");
+        }
+        ReturnTo ??= MyAppInfo.HomePath;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await Task.CompletedTask;
+        ErrorMessages = new List<string>();
+        var user = await UserManager.FindByNameAsync(Input?.UserName ?? "");
+        if (user is null) 
+        {
+            ErrorMessages.Add("User does not exist");
+            return;
+        }
+        if (IsAutoLoginUserIdOk(Input!))
+        {
+            await SignInManager.SignInAsync(user, Input!.RememberMe);
+            Logger.LogInformation($"Logged in as {user.UserName}.");
+            NM.NavigateTo($"MyAccount/AutoLogin/loggedin");
+        }
+        else
+        {
+            ErrorMessages.Add("Something went wrong!");
+            ErrorMessages.Add($"UserId: {Input?.UserId}");
+            // ErrorMessages.Add($"Hashed1: {MyLoginRequestShared.GetHashedUserId(Input.Email, DateTime.Now)}");
+            // ErrorMessages.Add($"Hashed2: {MyLoginRequestShared.GetHashedUserId(Input.Email, DateTime.Now.AddDays(-1))}");
+        }
+    }
+    private bool IsAutoLoginUserIdOk(InputModel input)
+    {
+        if (input.UserId == MyLoginRequestShared.GetHashedUserId(input.Email, clsLocalTime.Today())) return true;
+        if (input.UserId == MyLoginRequestShared.GetHashedUserId(input.Email, clsLocalTime.Today().AddDays(-1))) return true;
+        return false;
+    }
+    private sealed class InputModel
+    {
+        public string UserName { get; set; } = "";
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+        public bool RememberMe { get; set; } = false;
+        public string UserId { get; set; } = "";
+    }
+}

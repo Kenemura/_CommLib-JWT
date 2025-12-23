@@ -1,0 +1,78 @@
+﻿@page "/Identity/Roles/List"
+@using MyCommLib.Shared.Models.Identity
+@attribute [Authorize(Roles = "Admins")]
+@inject IdentityApi api
+@inject xAuthService auth
+@inject IJSRuntime JS
+@inject NavigationManager NM
+
+<p><span class="text-info">Identity Role List</span></p>
+<div class="p-1">
+    <a href="Identity/Role/Edit/create" class="btn btn-sm btn-primary">Create</a>
+</div>
+
+@if (PageList is null)
+{
+    <div>Loading...</div>
+}
+else
+{
+    <div class="p-1">
+        <MyPagenation Paging="Paging" PageChanged="@(page => PageTo(page))"></MyPagenation>
+    </div>
+
+    <MyTable Items="PageList" TItem="IdentityRoleModel">
+        <MyHeader>
+            <th>Name</th>
+            <th></th>
+        </MyHeader>
+        <Row Context="role">
+            <td nowrap>@role.Name</td>
+            <td class="text-left py-0">
+                <a href="@GetDeleteUrl(@role!.Id!)" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </Row>
+    </MyTable>
+}
+
+@code {
+    private List<IdentityRoleModel> PageList { get; set; } = null!;
+
+    public MyPagenationModel Paging { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        await GetRolesListed();
+    }
+    private async Task GetRolesListed()
+    {
+        var count = await api.GetRoleCount();
+        Paging = new MyPagenationModel(count, 16);
+        await PageTo(1);
+    }
+
+    string GetDeleteUrl(string id) => $"Identity/Role/Edit/delete/{id}";
+
+    private async Task PageTo(int page)
+    {
+        if (page < 0 || page > Paging.TotalPages) page = 1;
+        if (page == 0) // All
+        {
+            PageList = await api.GetRoles(Paging.TotalSize, 1);
+        }
+        else
+        {
+            Paging.CurrentPage = page;
+            PageList = await api.GetRoles(Paging.PageSize, Paging.CurrentPage);
+
+            // PageList = await api.GetRoles(); // Testing without paging
+            // var role1 = new IdentityRole() { Name = "test" };
+            // var role2 = new IdentityRole() { Name = "test2" };
+            // PageList = new List<IdentityRole>()
+            // {
+            //     role1, role2
+            // };
+        }
+    }
+}

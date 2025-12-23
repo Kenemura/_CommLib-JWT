@@ -1,0 +1,70 @@
+﻿
+<a type="button" @onclick="StopStart">
+    @if (TimeFrom == DateTime.MinValue)
+    {
+        <span>@currentTime.ToString(FormatTime, (new clsCultureInfo()).ci)</span>
+        <span>@TimeZoneName()</span>
+
+    }
+    else
+    {
+        <span>@(Elapsed(currentTime, TimeFrom).ToString(FormatElapsed, (new clsCultureInfo()).ci))</span>
+    }
+    <span class="text-danger">@(!timer.Enabled ? " (Stopped)" : "")</span>
+</a>
+
+@code {
+    private DateTime Elapsed(DateTime now, DateTime from)
+    {
+        var elapsed = DateTime.MinValue;
+        if (now < from) return elapsed;
+        elapsed = elapsed.Add(now - from);
+        return elapsed;
+    }
+    private string TimeZoneName()
+    {
+        var name = ZoneName;
+        if (clsLocalTime.IsDS(City)) name = (String.IsNullOrEmpty(ZoneNameDS)) ? ZoneName : ZoneNameDS;
+        return name;
+    }
+
+    [Parameter] public int Interval { get; set; } = 1000;
+    [Parameter] public string FormatTime { get; set; } = "dd MMM yyyy - HH:mm:ss";
+    [Parameter] public DateTime TimeFrom { get; set; } = DateTime.MinValue;
+    [Parameter] public string FormatElapsed { get; set; } = "HH:mm:ss";
+    [Parameter] public string City { get; set; } = "SYD";
+    [Parameter] public string ZoneName { get; set; } = "";
+    [Parameter] public string ZoneNameDS { get; set; } = "";
+    [Parameter] public bool Enabled { get; set; } = true;
+
+    private System.Timers.Timer timer = null!;
+    private DateTime currentTime = clsLocalTime.Now();
+
+    protected override void OnInitialized()
+    {
+        SetTimer(Interval);
+        currentTime = clsLocalTime.Now(City);
+    }
+    private void SetTimer(int interval)
+    {
+        timer = new System.Timers.Timer(interval);
+        timer.Elapsed += OnTimedEvent;
+        timer.AutoReset = true;
+        timer.Enabled = Enabled;
+    }
+    private void OnTimedEvent(Object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        InvokeAsync(UpdateTime);
+    }
+    private void UpdateTime()
+    {
+        currentTime = clsLocalTime.Now(City);
+        StateHasChanged();
+    }
+
+    private void StopStart()
+    {
+        timer.Enabled = !timer.Enabled;
+        // State.IsClockEnabled = timer.Enabled;
+    }
+}

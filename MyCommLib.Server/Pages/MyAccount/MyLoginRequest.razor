@@ -1,0 +1,83 @@
+﻿@page "/MyAccount/LoginRequest"
+@page "/MyAccount/LoginRequest/{Status}"
+@using MyCommLib.Shared.Classes
+
+@inject UserManager<IdentityUser> um;
+@inject MyEmailSender em;
+
+<MyPageHeader>Login Request</MyPageHeader>
+
+@if (Status == "Sent")
+{
+    <div class="alert alert-warning">You'll receive an email shortly. While waiting, you can continue using as a visitor.</div>
+}
+else
+{
+    <EditForm class="form-signin" Model="Req" OnValidSubmit="HandleValidSubmit" FormName="LoginRequest">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <ul>
+            @foreach (string msg in ErrorMessages)
+            {
+                <li style="color: red">@msg</li>
+            }
+        </ul>
+
+        <div class="form-group">
+            <label class="MyFormLabel">Email:</label>
+            <InputText class="form-control" @bind-Value="Req!.Email" autofocus placeholder="Email" />
+        </div>
+        <div class="my-2">
+            <button class="btn btn-primary btn-sm" type="submit">Login Request</button>
+            <a class="btn btn-sm btn-warning" href="@ReturnTo">Cancel</a>
+        </div>
+    </EditForm>
+
+    <hr />
+    <div class="text-info">
+        - After you send this request, you will receive an Email titled "Auto Login to @MyAppInfo.AppTitle"<br />
+        - Use the link in the email to open Auto Login page of this site, and proceed to login.
+    </div>
+}
+
+@code {
+    [CascadingParameter] HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromForm] public LoginRequestModel? Req { get; set; }
+    [Parameter] public string Status { get; set; } = "";
+    [SupplyParameterFromQuery] public string? ReturnTo { get; set; }
+    private List<string> ErrorMessages = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        Req ??= new();
+        ReturnTo ??= MyAppInfo.HomePath;
+    }
+    private async Task HandleValidSubmit()
+    {
+        await Task.CompletedTask;
+        var user = await um.FindByEmailAsync(Req?.Email ?? "");
+        if (user is null)
+        {
+            ErrorMessages.Add("User does not exist");
+            return;
+        }
+        em.AddTo(user.UserName ?? "", user.Email ?? "");
+        em.AddSubject($"Auto Login to {MyAppInfo.AppTitle}");
+        em.AddHtmlBody(MyLoginRequestShared.EmailBody(user.UserName ?? "", user.Email ?? ""));
+        var result = await em.Send();
+        if (!String.IsNullOrEmpty(result))
+        {
+            ErrorMessages.Add(result);
+            return;
+        }
+        NM.NavigateTo("MyAccount/LoginRequest/Sent");
+    }
+
+    public class LoginRequestModel
+    {
+        [Required]
+        [EmailAddress]
+        public string? Email { get; set; }
+    }
+}

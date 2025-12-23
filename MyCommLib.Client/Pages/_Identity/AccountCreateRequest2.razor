@@ -1,0 +1,82 @@
+﻿@page "/identity/CreateRequest2"
+@inject IdentityApi api
+@attribute [Authorize(Roles = "Admins, AdminUsers")]
+
+<br/>
+<div class="alert alert-info mt-5">Account Create Request</div>
+@if (Status == "Created")
+{
+    <div class="alert alert-warning">
+        New Account:<span class="text-info">@Req.Username</span> is created.
+        <br/>Account holder can use Login Request to Login to this App.
+    </div>
+}
+else if (!String.IsNullOrEmpty(Status))
+{
+    <MySpinner>@Status</MySpinner>
+}
+else
+{
+    <EditForm class="form-signin" OnValidSubmit="OnSubmit" Model="Req">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <ul>
+            @foreach (string msg in ErrorMessages)
+            {
+                <li style="color: red">@msg</li>
+            }
+        </ul>
+
+        <div class="form-group">
+            <label class="MyFormLabel">User Name: (Choose your preferred Username. It should be unique among the users)</label>
+            <InputText class="form-control" @bind-Value="Req.Username" autofocus placeholder="User Name" />
+        </div>
+        <div class="form-group">
+            <label class="MyFormLabel">Email: (Enter your working email address)</label>
+            <InputText class="form-control" @bind-Value="Req.Email" autofocus placeholder="Email" />
+        </div>
+
+        <div class="my-2">
+            <button class="btn btn-primary btn-sm" type="submit">Create Request</button>
+            <a class="btn btn-sm btn-warning" href="@ReturnTo">Cancel</a>
+        </div>
+    </EditForm>
+
+    <hr />
+    <div class="text-info">
+        - After you create a new account here, account holder can use Login Request to login to this App.
+    </div>
+}
+
+@code {
+    [Parameter] public string ReturnTo { get; set; } = "";
+    CreateRequestModel Req { get; set; } = new CreateRequestModel();
+    List<string> ErrorMessages { get; set; } = new List<string>();
+
+    private string Status = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        ErrorMessages = new List<string>();
+    }
+
+    async Task OnSubmit()
+    {
+        ErrorMessages = new List<string>();
+        Status = "Creating...";
+        StateHasChanged();
+        await Task.Delay(1);
+        try
+        {
+            await api.CreateRequest2(Req);
+            Status = "Created";
+        }
+        catch (Exception ex) // return BadRequest when not authenticated
+          {
+            ErrorMessages.Add(ex.Message);
+            Status = "";
+            Console.WriteLine(ex.Message);
+        }
+    }
+}

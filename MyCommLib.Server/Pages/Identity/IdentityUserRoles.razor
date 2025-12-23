@@ -1,0 +1,70 @@
+﻿@page "/Server/IdentityUser/Roles/{id}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using MyCommLib.Shared.Models.MyAccount
+@attribute [Authorize(Roles = "Admins")]
+@inject IIdentityApi api
+
+<MyPageHeader>Identity User Role List</MyPageHeader>
+<div class="m-2">
+    <a class="btn btn-sm btn-outline-warning" href="@PathBack">Back</a>
+</div>
+@if (User != null)
+{
+    <table class="">
+        <tr>
+            <td class="MyItem">Username:</td>
+            <td>@User.Username</td>
+        </tr>
+        <tr>
+            <td class="MyItem">Email:</td>
+            <td>@User.Email</td>
+        </tr>
+    </table>
+    <br/>
+
+    <table class="table table-sm table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Role</th>
+                <th>Assigned</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (IdentityRoleModel role in Roles)
+            {
+                <tr>
+                    <td nowrap>@role.Name</td>
+                    <td nowrap>@(UserInRole[role!.Name!] ? "Yes" : "")</td>
+                    <td class="text-left" style="padding: 0px">
+                        <a class="btn btn-sm btn-primary" href="@PathAddRemove(role)">@AddRemove(role)</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private string? PathBack => $"Server/IdentityUser/List?SelRole={SelRole ?? "-"}";
+    private string? PathAddRemove(IdentityRoleModel role) => $"Server/IdentityUser/SetRole/{Id}/{AddRemove(role)}/{role.Name}?SelRole={SelRole ?? "-"}";
+    private string? AddRemove(IdentityRoleModel role) => UserInRole[role.Name!] ? "Remove" : "Add";
+
+    [Parameter] public string Id { get; set; } = null!;
+    [SupplyParameterFromQuery(Name = "SelRole")] public string? SelRole { get; set; }
+    public IdentityUserModel User { get; set; } = null!;
+    public IEnumerable<IdentityRoleModel> Roles { get; set; } = null!;
+
+    public IDictionary<string, bool> UserInRole = new Dictionary<string, bool>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        User = await api.GetUser(Id);
+        Roles = await api.GetRoles();
+        foreach (var role in Roles)
+        {
+            UserInRole.Add(role!.Name!, await api.IsUserInRole(User.Id!, role!.Name!));
+        }
+    }
+}

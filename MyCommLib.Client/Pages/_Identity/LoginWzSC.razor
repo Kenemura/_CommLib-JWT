@@ -1,0 +1,82 @@
+﻿@page "/identity/LoginWzSC/{Email}"
+@inject xAuthService auth
+@inject HttpClient Http
+@using System.ComponentModel.DataAnnotations;
+
+<br/>
+<div class="alert alert-info mt-5">Login with Secret Code
+    (<span class="text-danger"><b>Do not close this window!</b></span>)
+    <br/>Check your email showing your login info. Use those info to login here.
+</div>
+
+<EditForm class="xform-signin" OnValidSubmit="OnSubmit" Model="Req">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <ul>
+        @foreach (string msg in ErrorMessages)
+        {
+            <li style="color: red">@msg</li>
+        }
+    </ul>
+
+    <div class="form-group">
+        <label class="MyFormLabel">User Name:</label>
+        <InputText class="form-control" @bind-Value="Req.Username" autofocus placeholder="User Name" />
+    </div>
+
+    <div class="form-group">
+        <label class="MyFormLabel">Secret Code:</label>
+        <InputText class="form-control" @bind-Value="Req.SecretCode" placeholder="Secret Code" />
+    </div>
+    <div class="alert alert-danger my-3">
+        <div class="form-check">
+            <label class="form-check-label">
+                <InputCheckbox class="form-check-input" @bind-Value="@Req.RememberMe" />
+                Remember Me:
+            </label>
+        </div>
+        <div>
+            Do not tick <b>Remember Me</b> if you are on a public device.
+            <br />And, make sure to Logout when you finish.
+        </div>
+    </div>
+    <div class="my-2">
+        <button class="btn btn-primary btn-sm" type="submit">Log In</button>
+        <a class="btn btn-sm btn-warning" href="@ReturnTo">Cancel</a>
+    </div>
+
+</EditForm>
+
+@code {
+    [Parameter] public string ReturnTo { get; set; } = "Index";
+    [Parameter] public string Email { get; set; } = null!;
+    LoginWzSCModel Req { get; set; } = new();
+    List<string> ErrorMessages { get; set; } = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+    }
+
+    async Task OnSubmit()
+    {
+        ErrorMessages = new List<string>();
+        try
+        {
+            Req.Email = Email;
+            var rmPassword = await auth.LoginWzSC(Req);
+            if (Req.RememberMe)
+            {
+                var rm = new clsRememberMeW(Http, JS);
+                await rm.Set(Req.Username, rmPassword);
+            }
+
+            NM.NavigateTo(ReturnTo);
+        }
+        catch (Exception ex) // return BadRequest when not authenticated
+        {
+            ErrorMessages.Add($"Something went wrong! ({ex.Message})");
+            Console.WriteLine(ex.Message);
+        }
+    }
+}

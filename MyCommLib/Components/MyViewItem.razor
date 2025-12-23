@@ -1,0 +1,14 @@
+﻿<tr>
+    <td class="MyItem">
+        @Name
+    </td>
+    <td colspan="2" @attributes="AdditionalAttributes">
+        @ChildContent
+    </td>
+</tr>
+
+@code {
+    [Parameter] public string Name { get; set; } = null!;
+    [Parameter] public RenderFragment ChildContent { get; set; } = null!;
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object> AdditionalAttributes { get; set; } = null!;
+}

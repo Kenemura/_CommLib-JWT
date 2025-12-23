@@ -1,0 +1,108 @@
+﻿@page "/Config/List"
+@page "/Config/List/{Category}"
+@attribute [Authorize(Roles = "Admins")]
+@inject ConfigApi api
+
+<MyPageHeader>Config List</MyPageHeader>
+<div class="row align-items-center my-2">
+    <div class="col-auto">
+        <a class="btn btn-sm btn-primary" href="Config/Edit/Create/@Guid.NewGuid()/@Category">Create New Config</a>
+    </div>
+    <div class="col-auto">
+        <select class="form-control form-control-sm" value="@Category" @onchange="OnSelected">
+            <option value="-">&lt;Select Category&gt;</option>
+            @foreach (var cat in categories)
+            {
+                <option value="@cat" selected="@(cat == Category)">@cat</option>
+            }
+        </select>
+    </div>
+</div>
+@if (pageState != "")
+{
+    <MySpinner>Wait a moment...(@pageState)</MySpinner>
+}
+else if (PageList == null)
+{
+    <div class="alert alert-info">Loading...</div>
+}
+else
+{
+    <MyTable Items="PageList" TItem="ConfigKVP">
+        <MyHeader>
+            <th>Key</th><th>Value</th><th></th>
+        </MyHeader>
+        <Row>
+            <td><a href="Config/Edit/View/@context.Id/@Category">@context.Key</a></td>
+            <td>@context.Value</td>
+            <td nowrap class="text-left py-0">
+            </td>
+        </Row>
+    </MyTable>
+}
+
+@code {
+    [Parameter] public string Category { get; set; } = "-";
+    private IEnumerable<ConfigKVP> ConfigKVPs = Enumerable.Empty<ConfigKVP>();
+    private IEnumerable<ConfigKVP> PageList = Enumerable.Empty<ConfigKVP>();
+    private string pageState = "";
+    private async Task SetPageState(string state)
+    {
+        await Task.CompletedTask;
+        pageState = state;
+        StateHasChanged();
+        await Task.Delay(10);
+    }
+    private List<string> categories = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigKVPs = await api.GetList();
+        PageList = ConfigKVPs;
+        SetCategories();
+    }
+    protected override void OnParametersSet()
+    {
+        if (String.IsNullOrEmpty(Category)) Category = "-";
+        if (Category == "-")
+        {
+            PageList = ConfigKVPs;
+        }
+        else
+        {
+            PageList = ConfigKVPs.Where(x => x.Key.StartsWith(Category));
+        }
+    }
+
+    private void SetCategories()
+    {
+        foreach (var kvp in ConfigKVPs)
+        {
+            var cats = kvp.Key.Split(":");
+            var cat = cats[0];
+            if (!categories.Contains(cat)) categories.Add(cat);
+            if (cats.Length > 2)
+            {
+                cat = cats[0] + ":" + cats[1];
+            }
+            if (!categories.Contains(cat)) categories.Add(cat);
+            if (cats.Length > 3)
+            {
+                cat = cats[0] + ":" + cats[1] + ":" + cats[2];
+            }
+            if (!categories.Contains(cat)) categories.Add(cat);
+        }
+    }
+    private void OnSelected(ChangeEventArgs e)
+    {
+        Category = e.Value as string ?? "";
+        if (String.IsNullOrEmpty(Category))
+        {
+            NM.NavigateTo("Config/List");
+        }
+        else
+        {
+            NM.NavigateTo($"Config/List/{Category}");
+        }
+    }
+}

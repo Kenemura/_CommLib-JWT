@@ -1,0 +1,30 @@
+﻿<!-- Button trigger modal -->
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#@Id">
+  @Button
+</button>
+
+<!-- Modal -->
+<div class="modal fade" id="@Id" tabindex="-1" aria-labelledby="@(Id)Label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fs-5" id="@(Id)Label">@Title</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        @Body
+      </div>
+      <div class="modal-footer">
+        @Footer
+      </div>
+    </div>
+  </div>
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = "modalId";
+    [Parameter] public string Button { get; set; } = "Button";
+    [Parameter] public string Title { get; set; } = "Title";
+    [Parameter] public RenderFragment? Body { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+}

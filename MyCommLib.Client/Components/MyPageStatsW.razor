@@ -1,0 +1,100 @@
+﻿
+<table class="table table-sm table-bordered">
+    <tbody>
+        <tr>
+            <td class="MyItem">Started:</td>
+            <td class="pb-0">
+                @TimeStarted.ToString("dd MMM yyyy HH:mm:ss", CI.ci)
+                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="ResetStats">Reset</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="StopStart">@StopOrStart</button>
+            </td>
+        </tr>
+        <tr>
+            <td class="MyItem">Elapsed:</td>
+            <td>@((DateTime.Today + Elapsed).ToString("HH:mm:ss", CI.ci))</td>
+        </tr>
+        @if (RestartCount > 0)
+        {
+            <tr>
+                <td class="MyItem">Restarted Count:</td>
+                <td>@RestartCount.ToString()</td>
+            </tr>
+            <tr>
+                <td class="MyItem">Last Restarted:</td>
+                <td>@TimeRestarted.ToString("dd MMM yyyy HH:mm:ss", CI.ci)</td>
+            </tr>
+            <tr>
+                <td class="MyItem">Average Lasted:</td>
+                <td>@((DateTime.Today + AverageElapsed).ToString("HH:mm:ss"))</td>
+            </tr>
+            <tr>
+                <td class="MyItem">Current Elapsed:</td>
+                <td>@((DateTime.Today + CurrentElapsed).ToString("HH:mm:ss"))</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private string StopOrStart => (timer == null) ? "" : timer.Enabled ? "Stop" : "Start";
+    private clsLocalStorage<DateTime> LSDateTime = null!;
+    private clsLocalStorage<int> LSInt = null!;
+    private System.Timers.Timer timer = null!;
+
+    private DateTime TimeStarted;
+    private DateTime TimeRestarted;
+    private TimeSpan Elapsed;
+    private TimeSpan CurrentElapsed;
+    private TimeSpan AverageElapsed;
+    private int RestartCount = 0;
+    private clsCultureInfo CI = new clsCultureInfo();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        LSDateTime = new clsLocalStorage<DateTime>(JS);
+        LSInt = new clsLocalStorage<int>(JS);
+
+        TimeRestarted = clsLocalTime.Now();
+        TimeStarted = await LSDateTime.Get("TimeStarted", TimeRestarted);
+        await LSDateTime.Set("TimeStarted", TimeStarted);
+        RestartCount = await LSInt.Get("RestartCount", 0);
+        await LSInt.Set("RestartCount", RestartCount + 1);
+
+        SetTimer();
+    }
+
+    private void SetTimer()
+    {
+        timer = new System.Timers.Timer(1000);
+        timer.Elapsed += OnTimedEvent;
+        timer.AutoReset = true;
+        timer.Enabled = true;
+    }
+    private void OnTimedEvent(Object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        InvokeAsync(TimerProc);
+    }
+    private void TimerProc()
+    {
+        Elapsed = clsLocalTime.Now() - TimeStarted;
+        CurrentElapsed = clsLocalTime.Now() - TimeRestarted;
+        AverageElapsed = Elapsed / (RestartCount + 1);
+        StateHasChanged();
+    }
+    private async Task ResetStats()
+    {
+        await Task.CompletedTask;
+        TimeRestarted = clsLocalTime.Now();
+        TimeStarted = TimeRestarted;
+
+        await LSDateTime.Set("TimeStarted", TimeStarted);
+        RestartCount = 0;
+        await LSInt.Set("RestartCount", RestartCount);
+    }
+    private async Task StopStart()
+    {
+        await Task.CompletedTask;
+        timer.Enabled = !timer.Enabled;
+    }
+}
