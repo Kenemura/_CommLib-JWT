@@ -17,31 +17,28 @@ public static class clsObject
     }
     public static void CopyTo<TFrom, TTo>(this TFrom from, TTo to, Func<System.Reflection.PropertyInfo, bool> exclude, bool copyOnly)
     {
-        Type type = typeof(TFrom);
-        PropertyInfo[] properties = type.GetProperties();
-        string[] types =["String", "Int32", "Int64", "DateTime", "Boolean", "Decimal", "Byte", "SByte", "Char", "Double", "Single" ];
-
-        var propsFrom = typeof(TFrom).GetProperties().Where(x => x.CanRead).ToList();
-        var propsTo = typeof(TTo).GetProperties().Where(x => x.CanWrite).ToList();
+        if (from == null || to == null) return;
+        var propsFrom = typeof(TFrom).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                         .Where(p => p.CanRead && p.GetIndexParameters().Length == 0);
+        var propsTo = typeof(TTo).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                     .Where(p => p.CanWrite && p.GetIndexParameters().Length == 0)
+                                     .ToDictionary(p => p.Name);
         foreach (var propFrom in propsFrom)
         {
-            var name = propFrom.Name;
-            //Console.WriteLine(name);
-            var propTo = propsTo.FirstOrDefault(x => x.Name == propFrom.Name);
-            if (propTo is null) { }
-            else if (exclude(propFrom)) { }
-            else
-            {
-                if (!copyOnly || types.Contains(propFrom.PropertyType.Name))
-                {
-                    //Console.WriteLine(propFrom.PropertyType.Name);
-                    //propTo.SetValue(to, propFrom.GetValue(from));
-                    var value = propFrom.GetValue(from);
-                    propTo.SetValue(to, value);
-                }
-            }
+            if (exclude(propFrom)) continue;
+            if (!propsTo.TryGetValue(propFrom.Name, out var propTo)) continue;
+            if (!propTo.PropertyType.IsAssignableFrom(propFrom.PropertyType)) continue;
+            if (copyOnly && !IsSimpleType(propFrom.PropertyType)) continue;
+
+            var value = propFrom.GetValue(from);
+            propTo.SetValue(to, value);
         }
     }
+    private static bool IsSimpleType(Type type)
+    {
+        return type.IsPrimitive || type == typeof(string) || type == typeof(decimal) || type == typeof(DateTime) || type == typeof(Guid);
+    }
+
     public static bool EqualTo<TFrom, TTo>(this TFrom from, TTo to)
     {
         return EqualTo(from, to, x => false);
@@ -52,22 +49,17 @@ public static class clsObject
     }
     public static bool EqualTo<TFrom, TTo>(this TFrom from, TTo to, Func<System.Reflection.PropertyInfo, bool> exclude)
     {
-        var propsFrom = typeof(TFrom).GetProperties().Where(x => x.CanRead).ToList();
-        var propsTo = typeof(TTo).GetProperties().Where(x => x.CanWrite).ToList();
+        if (ReferenceEquals(from, to)) return true;
+        if (from == null || to == null) return false;
+        var propsFrom = typeof(TFrom).GetProperties().Where(x => x.CanRead);
+        var propsTo = typeof(TTo).GetProperties().Where(x => x.CanRead).ToDictionary(x => x.Name);
         foreach (var propFrom in propsFrom)
         {
-            var propTo = propsTo.FirstOrDefault(x => x.Name == propFrom.Name);
-            if (propTo is null) { }
-            else if (exclude(propFrom)) { }
-            else
-            {
-                var valFrom = propFrom.GetValue(from)?.ToString();
-                var valTo = propTo.GetValue(to)?.ToString();
-                if (valFrom != valTo)
-                {
-                    return false;
-                }
-            }
+            if (exclude(propFrom)) continue;
+            if (!propsTo.TryGetValue(propFrom.Name, out var propTo)) continue;
+            var valFrom = propFrom.GetValue(from);
+            var valTo = propTo.GetValue(to);
+            if (!object.Equals(valFrom, valTo)) return false;
         }
         return true;
     }

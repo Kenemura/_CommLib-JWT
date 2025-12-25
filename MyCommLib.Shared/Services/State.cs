@@ -1,9 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 using MyCommLib.Shared.Models.Identity;
 using System.Security.Claims;
-using System.Net.Http;
 
 namespace MyCommLib.Shared.Services;
 public class State

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace MyCommLib.Shared.Models.Identity;
+namespace MyCommLib.Shared.Models.Auth;
 
 public class LoginResponseModel
 {

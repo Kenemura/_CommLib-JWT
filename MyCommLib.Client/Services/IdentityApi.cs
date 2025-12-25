@@ -1,6 +1,7 @@
 ﻿namespace MyCommLib.Client.Services;
 
 using Microsoft.AspNetCore.Identity;
+using MyCommLib.Shared.Models.Auth;
 using MyCommLib.Shared.Models.Identity;
 using System.Net.Http.Json;
 

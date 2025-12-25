@@ -1,13 +1,14 @@
-﻿@page "/identity/loginrequest"
-@inject IdentityApi api
+﻿@page "/auth/loginrequest"
+@using MyCommLib.Shared.Models.Auth
+@inject IMyAuthenticationService AuthService
+@inject IHttpClientFactory HttpFactory
 
 <br/>
-<div class="alert alert-info mt-5">Login Request</div>
-@if (Status == "Sent")
-{
-    <div class="alert alert-warning">You'll receive an email shortly. While waiting, you can continue using as a visitor.</div>
-}
-else if (!String.IsNullOrEmpty(Status))
+<div class="alert alert-info mt-5">Login Request
+    <br/>Enter your account email address, and send this login request.
+    <br/>You will receive an email showing your login info.
+</div>
+@if (!String.IsNullOrEmpty(Status))
 {
     <MySpinner>@Status</MySpinner>
 }
@@ -32,17 +33,11 @@ else
             <a class="btn btn-sm btn-warning" href="@ReturnTo">Cancel</a>
         </div>
     </EditForm>
-
-    <hr />
-    <div class="text-info">
-        - After you send this request, you will receive an Email titled "Auto Login to @State.AppTitle"<br />
-        - Use the link in the email to open Auto Login page of this site, and proceed to login.
-    </div>
 }
 
 @code {
     [Parameter] public string ReturnTo { get; set; } = "";
-        Shared.Models.Identity.LoginRequestModel Req { get; set; } = new Shared.Models.Identity.LoginRequestModel();
+    LoginRequestModel Req { get; set; } = new();
     List<string> ErrorMessages { get; set; } = new List<string>();
 
     private string Status = "";
@@ -59,12 +54,12 @@ else
         await Task.Delay(1);
         try
         {
-            await api.LoginRequest(Req);
-            Status = "Sent";
+            await AuthService.LoginRequest(Req);
+            NM.NavigateTo($"auth/LoginWithSecretCode/{Req.Email}");
         }
         catch (Exception ex) // return BadRequest when not authenticated
         {
-            ErrorMessages.Add($"Something went wrong! ({ex.Message})");
+            ErrorMessages.Add(ex.Message);
             Status = "";
             Console.WriteLine(ex.Message);
         }
