@@ -31,6 +31,8 @@
         ErrorMessages = new List<string>(); 
         await BLS.RemoveItemAsync("access_token");
         await AuthProvider.GetAuthenticationStateAsync();
+        var rm = new clsRememberMeW(BLS);
+        await rm.Reset();
         NM.NavigateTo(ReturnTo, forceLoad: true);
     }
 }

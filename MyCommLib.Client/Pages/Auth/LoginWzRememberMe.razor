@@ -1,6 +1,6 @@
-﻿@page "/identity/login2"
-@inject xAuthService auth
-@inject HttpClient Http
+﻿@page "/auth/loginWzRememberMe"
+@inject IMyAuthenticationService AuthService
+@inject IHttpClientFactory HttpFactory
 
 <br/>
 @if (String.IsNullOrEmpty(Username) || String.IsNullOrEmpty(Password))
@@ -37,8 +37,18 @@ else
     protected override async Task OnInitializedAsync()
     {
         await Task.CompletedTask;
-        var rm = new clsRememberMeW(Http, JS);
-        (Username, Password) = await rm.Get();
+        // http = HttpFactory.CreateClient("Api");
+        try
+        {
+            var rm = new clsRememberMeW(BLS);
+            (Username, Password) = await rm.Get();
+            Console.WriteLine($"Username/Password: {Username}, {Password}");
+        }
+        catch(Exception ex)
+        {
+            throw new(ex.Message);
+        }
+
         if (String.IsNullOrEmpty(Username) || String.IsNullOrEmpty(Password))
         {
             NM.NavigateTo(ReturnTo);
@@ -55,9 +65,15 @@ else
         var req = new LoginModel() { Username = Username, Password = Password, RememberMe = true };
         try
         {
-            var rmPassword = await auth.Login2(req);
-            var rm = new clsRememberMeW(Http, JS);
-            await rm.Set(req.Username, rmPassword);
+            var resp = await AuthService.LoginWzRememberMeAsync(req);
+            if (string.IsNullOrEmpty(resp.AccessToken))
+            {
+                ErrorMessages.Add("Invalid Username or Password!");
+                return;
+            }
+            await BLS.SetItemAsync("access_token", resp.AccessToken);
+            var rm = new clsRememberMeW(BLS);
+            await rm.Set(req.Username, resp.RmPassword ?? "");
         }
         catch (Exception ex) // return BadRequest when not authenticated
         {

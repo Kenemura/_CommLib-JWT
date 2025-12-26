@@ -6,10 +6,10 @@ using System.Security.Claims;
 namespace MyCommLib.Shared.Services;
 public class State
 {
-    public static string AppTitle = "";
-    public static string AppName = "";
-    public static string AppUrl = "";
-    public static string AppCity = "SYD";
+    //public static string AppTitle = "";
+    //public static string AppName = "";
+    //public static string AppUrl = "";
+    //public static string AppCity = "SYD";
     private NavigationManager NM { get; set; } = default!;
     private HttpClient Http { get; set; } = default!;
     private IJSRuntime JS {  get; set; }
@@ -17,7 +17,7 @@ public class State
     public State(NavigationManager nm, HttpClient http, IJSRuntime js)
     {
         NM = nm;
-        AppUrl = NM.BaseUri;
+        //AppUrl = NM.BaseUri;
         Http = http;
         JS = js;
         //this.env = env;

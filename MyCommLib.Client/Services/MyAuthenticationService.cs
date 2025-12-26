@@ -27,10 +27,21 @@ public class MyAuthenticationService : IMyAuthenticationService
         }
         return loginResp;
     }
-    public async Task<LoginResponseModel> LoginUserAsync(LoginWithSecretCodeModel req)
+    public async Task<LoginResponseModel> LoginWzRememberMeAsync(LoginModel req)
     {
         var loginResp = new LoginResponseModel();
-        var resp = await _http.PostAsJsonAsync("api/auth/LoginWithSecretCode", req);
+        var resp = await _http.PostAsJsonAsync("api/auth/LoginWzRememberMe", req);
+        if (resp.IsSuccessStatusCode)
+        {
+            loginResp = await resp.Content.ReadFromJsonAsync<LoginResponseModel>();
+            if (loginResp == null) loginResp = new LoginResponseModel();
+        }
+        return loginResp;
+    }
+    public async Task<LoginResponseModel> LoginWzSecretCodeAsync(LoginWzSecretCodeModel req)
+    {
+        var loginResp = new LoginResponseModel();
+        var resp = await _http.PostAsJsonAsync("api/auth/LoginWzSecretCode", req);
         if (resp.IsSuccessStatusCode)
         {
             loginResp = await resp.Content.ReadFromJsonAsync<LoginResponseModel>();

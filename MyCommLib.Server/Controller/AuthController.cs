@@ -8,7 +8,6 @@ using MyCommLib.Server.Classes;
 using MyCommLib.Server.Services;
 using MyCommLib.Shared.Models.Auth;
 using MyCommLib.Shared.Models.Identity;
-using MyCommLib.Shared.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -46,8 +45,10 @@ public class AuthController : ControllerBase
         if (req.RememberMe)
         {
             var rmPassword = clsRememberMe.GetEncrypted(req.Password);
+            var test = clsRememberMe.GetDecrypted(rmPassword);
             resp.RmPassword = rmPassword;
         }
+        Console.WriteLine($"Login OK!");
         return Ok(resp);
     }
 
@@ -81,7 +82,35 @@ public class AuthController : ControllerBase
 
     [HttpPost]
     [AllowAnonymous]
-    public async Task<IActionResult> LoginWithSecretCode(LoginWithSecretCodeModel req)
+    public async Task<IActionResult> LoginWzRememberMe([FromBody] LoginModel req)
+    {
+        var user = await _userManager.FindByNameAsync(req.Username);
+        if (user == null) return BadRequest("User does not exist");
+        try
+        {
+            var pwd = clsRememberMe.GetDecrypted(req.Password);
+            var signInResult = await _signInManager.CheckPasswordSignInAsync(user, pwd, false);
+            if (!signInResult.Succeeded) return BadRequest("Invalid password");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+
+        var resp = new LoginResponseModel();
+        resp.AccessToken = GetJwtToken(user);
+        if (req.RememberMe)
+        {
+            var rmPassword = req.Password;
+            resp.RmPassword = rmPassword;
+        }
+        Console.WriteLine($"LoginWzRememberMe OK!");
+        return Ok(resp);
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    public async Task<IActionResult> LoginWzSecretCode(LoginWzSecretCodeModel req)
     {
         var user = await _userManager.FindByNameAsync(req.Username);
         if (user == null) return BadRequest("User does not exist");
@@ -109,6 +138,7 @@ public class AuthController : ControllerBase
             var rmPassword = clsRememberMe.GetEncrypted(password);
             resp.RmPassword = rmPassword;
         }
+        Console.WriteLine($"LoginWzSecretCode OK!");
         return Ok(resp);
     }
     private bool IsLoginWzSCOk(string secretCode, string email)
@@ -126,29 +156,30 @@ public class AuthController : ControllerBase
         var user = await _userManager.FindByEmailAsync(req.Email);
         if (user is null) return BadRequest("User does not exist");
         _emailSender.AddTo(user.UserName!, user.Email!);
-        _emailSender.AddSubject($"Your Login Info for {State.AppTitle}");
-        _emailSender.AddHtmlBody(EmailBodyLoginReq2(user));
+        _emailSender.AddSubject($"Your Login Info for {req.AppTitle}");
+        _emailSender.AddHtmlBody(EmailBodyLoginReq(user, req));
+        _emailSender.AddFromName(req.AppName ?? "");
         var result = await _emailSender.Send();
         if (!String.IsNullOrEmpty(result)) return BadRequest(result);
         return Ok();
     }
-    private string EmailBodyLoginReq2(IdentityUser user)
+    private string EmailBodyLoginReq(IdentityUser user, LoginRequestModel req)
     {
         string body = $"<h3>Hello {user.UserName}-san!</h3>";
         body += $"<p>Use your User Name and Secret Code to Login.</p>";
         body += $"<p> - User Name: {user.UserName}";
         body += $"<br/> - Secret Code: {clsAccountHash.GetSecretCode(user.Email!, DateTime.Now)}";
         body += "<br/>(This Secret Code is valid only upto 24 hours for security reason)</p>";
-        body += EmailFooter();
+        body += EmailFooter(req);
         body = "<font size=\"+1\">" + body + "</font>";
         return body;
     }
-    private string EmailFooter()
+    private string EmailFooter(LoginRequestModel req)
     {
         var ft = "<br/>";
         ft += "==================================================<br/>";
-        ft += $"{State.AppName}<br/>";
-        ft += $"URL: {State.AppUrl}<br/>";
+        ft += $"{req.AppName}<br/>";
+        ft += $"URL: {req.AppUrl}<br/>";
         ft += "==================================================<br/>";
         return ft;
     }

@@ -10,6 +10,7 @@ using MyCommLib.Shared.Services;
 using MyCommLib.Shared.Models.Identity;
 //using MyCommLib.Shared.Services;
 using System.Security.Claims;
+using MyCommLib.Shared;
 
 [Route("api/[controller]/[action]")]
 [ApiController]
@@ -282,10 +283,8 @@ public class IdentityController : ControllerBase
         await Task.CompletedTask;
         var user = await _userManager.FindByEmailAsync(req.Email);
         if (user is null) return BadRequest("User does not exist");
-        //State.AppUrl = clsHttpContext.GetBaseUrl(HttpContext); // Set BaseUrl in AppInfo
-        //var result = await AutoLoginEmail.Send(user);
         _emailSender.AddTo(user.UserName!, user.Email!);
-        _emailSender.AddSubject($"Auto Login to {State.AppTitle}");
+        _emailSender.AddSubject($"Auto Login to {MyAppInfo.AppTitle}");
         _emailSender.AddHtmlBody(EmailBodyLoginReq(user));
         var result = await _emailSender.Send();
         if (!String.IsNullOrEmpty(result)) return BadRequest(result);
@@ -297,7 +296,7 @@ public class IdentityController : ControllerBase
         var user = await _userManager.FindByEmailAsync(req.Email);
         if (user is null) return BadRequest("User does not exist");
         _emailSender.AddTo(user.UserName!, user.Email!);
-        _emailSender.AddSubject($"Your Login Info for {State.AppTitle}");
+        _emailSender.AddSubject($"Your Login Info for {MyAppInfo.AppTitle}");
         _emailSender.AddHtmlBody(EmailBodyLoginReq2(user));
         var result = await _emailSender.Send();
         if (!String.IsNullOrEmpty(result)) return BadRequest(result);
@@ -317,7 +316,7 @@ public class IdentityController : ControllerBase
 
         //var result2 = await AutoLoginEmail.SendCreated(user);
         _emailSender.AddTo(user.UserName!, user.Email!);
-        _emailSender.AddSubject($"Auto Login to {State.AppTitle}");
+        _emailSender.AddSubject($"Auto Login to {MyAppInfo.AppTitle}");
         _emailSender.AddHtmlBody(EmailBodyCreateReq(user));
         var result2 = await _emailSender.Send();
         if (!String.IsNullOrEmpty(result2)) return BadRequest(result);
@@ -352,7 +351,7 @@ public class IdentityController : ControllerBase
 
     private string EmailBodyLoginReq(IdentityUser user)
     {
-        string url = $"{State.AppUrl.ToLower()}Identity/AutoLogin";
+        string url = $"{MyAppInfo.AppUrl.ToLower()}Identity/AutoLogin";
         url += $"?UserName={user.UserName}&Email={user.Email}";
         url += $"&UserId={clsAccountHash.GetHashedUserId(user.Email!, DateTime.Now)}";
 
@@ -375,12 +374,12 @@ public class IdentityController : ControllerBase
     }
     private string EmailBodyCreateReq(IdentityUser user)
     {
-        string url = $"{State.AppUrl.ToLower()}Identity/AutoLogin";
+        string url = $"{MyAppInfo.AppUrl.ToLower()}Identity/AutoLogin";
         url += $"?UserName={user.UserName}&Email={user.Email}";
         url += $"&UserId={clsAccountHash.GetHashedUserId(user.Email!, DateTime.Now)}";
 
         string body = $"<h3>Hello {user.UserName}-san!</h3>";
-        body += $"<p>Thank you for creating your account for {State.AppTitle}.";
+        body += $"<p>Thank you for creating your account for {MyAppInfo.AppTitle}.";
         body += $@" Use this <a href=""{url}"">Link</a> to Login to the site.";
         body += "<br/>(The above link works only upto 24hours for security reason)</p>";
         body += EmailFooter();
@@ -391,8 +390,8 @@ public class IdentityController : ControllerBase
     {
         var ft = "<br/>";
         ft += "==================================================<br/>";
-        ft += $"{State.AppName}<br/>";
-        ft += $"URL: {State.AppUrl}<br/>";
+        ft += $"{MyAppInfo.AppName}<br/>";
+        ft += $"URL: {MyAppInfo.AppUrl}<br/>";
         ft += "==================================================<br/>";
         return ft;
     }

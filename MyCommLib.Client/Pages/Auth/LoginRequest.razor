@@ -1,4 +1,5 @@
 ﻿@page "/auth/loginrequest"
+@using MyCommLib.Shared
 @using MyCommLib.Shared.Models.Auth
 @inject IMyAuthenticationService AuthService
 @inject IHttpClientFactory HttpFactory
@@ -54,9 +55,12 @@ else
         await Task.Delay(1);
         try
         {
+            Req.AppTitle = MyAppInfo.AppTitle;
+            Req.AppName = MyAppInfo.AppName;
+            Req.AppUrl = MyAppInfo.AppUrl;
             await AuthService.LoginRequest(Req);
-            // NM.NavigateTo($"auth/LoginWithSecretCode/{Req.Email}");
-            NM.NavigateTo($"auth/LoginWithSecretCode");
+            // NM.NavigateTo($"auth/LoginWzSecretCode/{Req.Email}");
+            NM.NavigateTo($"auth/LoginWzSecretCode");
         }
         catch (Exception ex) // return BadRequest when not authenticated
         {

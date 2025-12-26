@@ -67,8 +67,8 @@
             await BLS.SetItemAsync("access_token", resp.AccessToken);
             if (Req.RememberMe)
             {
-                var http = HttpFactory.CreateClient("Api");
-                var rm = new clsRememberMeW(http, JS);
+                // var http = HttpFactory.CreateClient("Api");
+                var rm = new clsRememberMeW(BLS);
                 await rm.Set(Req.Username, resp.RmPassword ?? "");
             }
 

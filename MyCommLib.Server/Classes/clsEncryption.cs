@@ -22,6 +22,7 @@ public class clsEncryption
             using (var cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
             {
                 cs.Write(plainBytes, 0, plainBytes.Length);
+                cs.FlushFinalBlock();
             }
             encryptedBytes = ms.ToArray();
         }
