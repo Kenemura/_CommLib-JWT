@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -10,7 +9,6 @@ using MyCommLib.Server.Services;
 using MyCommLib.Shared.Models.Auth;
 using MyCommLib.Shared.Models.Identity;
 using MyCommLib.Shared.Services;
-using Org.BouncyCastle.Ocsp;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -42,29 +40,6 @@ public class AuthController : ControllerBase
         if (user == null) return BadRequest("User does not exist");
         var signInResult = await _signInManager.CheckPasswordSignInAsync(user, req.Password, false);
         if (!signInResult.Succeeded) return BadRequest("Invalid password");
-
-        //var claims = new List<Claim> {
-        //    new(JwtRegisteredClaimNames.Sub, req.Username),
-        //    new(ClaimTypes.Name, req.Username),
-        //    new(ClaimTypes.Email, user.Email ?? ""),
-        //};
-        //var roles = _roleManager.Roles.Select(x => new IdentityRoleModel() { Id = x.Id, Name = x.Name! }).ToList();
-        //foreach (var role in roles){
-        //    claims.Add(new(ClaimTypes.Role, role.Name));
-        //}
-
-        //var secretBytes = Convert.FromBase64String(_cfg["Jwt:Key"]!);
-        //var key = new SymmetricSecurityKey(secretBytes);
-        //var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        //var token = new JwtSecurityToken(
-        //    issuer: _cfg["Jwt:Issuer"],
-        //    audience: _cfg["Jwt:Audience"],
-        //    claims: claims,
-        //    expires: DateTime.UtcNow.AddMinutes(int.Parse(_cfg["Jwt:AccessTokenMinutes"]!)),
-        //    signingCredentials: creds);
-
-        //var tokenStr = new JwtSecurityTokenHandler().WriteToken(token);
 
         var resp = new LoginResponseModel();
         resp.AccessToken = GetJwtToken(user);
@@ -108,10 +83,10 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> LoginWithSecretCode(LoginWithSecretCodeModel req)
     {
-        var password = clsAccountHash.GetHashedPassword(req.Email);
         var user = await _userManager.FindByNameAsync(req.Username);
         if (user == null) return BadRequest("User does not exist");
-        if (IsLoginWzSCOk(req))
+        var password = clsAccountHash.GetHashedPassword(user!.Email!);
+        if (IsLoginWzSCOk(req.SecretCode, user!.Email!))
         {
             await _userManager.RemovePasswordAsync(user);
             await _userManager.AddPasswordAsync(user, password);
@@ -136,10 +111,10 @@ public class AuthController : ControllerBase
         }
         return Ok(resp);
     }
-    private bool IsLoginWzSCOk(LoginWithSecretCodeModel req)
+    private bool IsLoginWzSCOk(string secretCode, string email)
     {
-        if (req.SecretCode == clsAccountHash.GetSecretCode(req.Email, DateTime.Now)) return true;
-        if (req.SecretCode == clsAccountHash.GetSecretCode(req.Email, DateTime.Now.AddDays(-1))) return true;
+        if (secretCode == clsAccountHash.GetSecretCode(email, DateTime.Now)) return true;
+        if (secretCode == clsAccountHash.GetSecretCode(email, DateTime.Now.AddDays(-1))) return true;
         return false;
     }
 

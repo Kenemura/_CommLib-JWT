@@ -55,7 +55,8 @@ else
         try
         {
             await AuthService.LoginRequest(Req);
-            NM.NavigateTo($"auth/LoginWithSecretCode/{Req.Email}");
+            // NM.NavigateTo($"auth/LoginWithSecretCode/{Req.Email}");
+            NM.NavigateTo($"auth/LoginWithSecretCode");
         }
         catch (Exception ex) // return BadRequest when not authenticated
         {
